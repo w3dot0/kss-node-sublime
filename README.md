@@ -4,7 +4,7 @@ Generate [Sublime Text](http://www.sublimetext.com/) snippets from a directory o
 
 ## Example
 
-By running the node-sublime command with default option this KSS comment:
+By running the kss-sublime command with default option this KSS comment:
 
 ```css
 // Label/Textbox Pairs
