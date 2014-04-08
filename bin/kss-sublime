@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+
+var fs = require('fs'),
+  xml = require('xml'),
+  kss = require('kss'),
+  mkdirp = require('mkdirp'),
+  path = require('path');
+
+var SUBLIME_PACKAGE_DIR = path.join(process.env.HOME, '/Library/Application Support/Sublime Text 2/Packages/'),
+  DEFAULT_OUTPUT_DIR = path.join(SUBLIME_PACKAGE_DIR, '{prefix}');
+
+var argv = require('optimist')
+  .usage('Generate Sublime Text 2 markup snippets from a kss styleguide directory. \nUsage:\n $0 -i sourcedir -o destdir -p prefix')
+
+.string('i')
+  .alias('i', 'input dir')
+  .describe('i', 'Styleguide directory')
+  .demand('i')
+
+.string('o')
+  .alias('o', 'output dir')
+  .describe('o', 'Output directory')
+  .default ('o', DEFAULT_OUTPUT_DIR)
+
+.string('p')
+  .alias('p', 'prefix')
+  .describe('p', 'Snippet tab trigger prefix')
+  .default ('p', 'kss')
+  .argv;
+
+var sourceDir = path.resolve(argv.i),
+  prefix = argv.p,
+  packageDir = path.resolve(argv.o.replace('{prefix}', prefix));
+
+function generateSlug(value) {
+  // 1) convert to lowercase
+  // 2) remove dashes and pluses
+  // 3) replace spaces with dashes
+  // 4) remove everything but alphanumeric characters and dashes
+  return value.toLowerCase().replace(/-+/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
+// only include sections that have markup
+function validSection(section) {
+  if (section.markup().length > 0) {
+    return true;
+  } else {
+    console.log('Skipping markup-less section ' + section.reference() + ': ' + section.header());
+    return false;
+  }
+}
+
+// create an xml object
+function toXML(id, section) {
+  var modifiers = section.modifiers().filter(function(modifier) {
+    return modifier.name().charAt(0) !== ':';
+  }).map(function(modifier, index) {
+    var pos = index + 1;
+    return '${' + pos + ':' + modifier.className() + '}';
+  });
+  return xml({
+    snippet: [{
+      content: {
+        _cdata: section.markup().replace(/\{\$modifiers\}/g, modifiers)
+      }
+    }, {
+      tabTrigger: id
+    }, {
+      description: section.header()
+    }, {
+      scope: 'text.html'
+    }]
+  }, {
+    indent: '  '
+  });
+}
+
+kss.traverse(sourceDir, function(err, styleguide) {
+  if (err) {
+    throw err;
+  }
+  var sections = styleguide.section();
+  console.log('Found ' + sections.length + ' sections in ' + sourceDir);
+
+  var snippets = sections.filter(validSection).map(function(s) {
+    var id = prefix + '_' + generateSlug(s.header());
+    return {
+      filename: id + '.sublime-snippet',
+      xml: toXML(id, s)
+    };
+  });
+  mkdirp(packageDir, function(err) {
+    if (err) {
+      throw err;
+    }
+    snippets.forEach(function(snippet) {
+      console.log('Writing ' + snippet.filename);
+      fs.writeFileSync(path.join(packageDir, snippet.filename), snippet.xml);
+    });
+    console.log('Generated ' + snippets.length + ' snippets in ' + packageDir);
+  });
+});
