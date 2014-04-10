@@ -4,10 +4,12 @@ var fs = require('fs'),
   xml = require('xml'),
   kss = require('kss'),
   mkdirp = require('mkdirp'),
-  path = require('path');
+  path = require('path'),
+  glob = require('glob');
 
-var SUBLIME_PACKAGE_DIR = path.join(process.env.HOME, '/Library/Application Support/Sublime Text 2/Packages/'),
-  DEFAULT_OUTPUT_DIR = path.join(SUBLIME_PACKAGE_DIR, '{prefix}');
+// support Sublime 1,2,3 via glob (first match will get the snippets...)
+var SUBLIME_PACKAGE_DIR = glob.sync(path.join(process.env.HOME, '/Library/Application Support/Sublime*/Packages/'))[0] || '.';
+DEFAULT_OUTPUT_DIR = path.join(SUBLIME_PACKAGE_DIR, '{prefix}');
 
 var argv = require('optimist')
   .usage('Generate Sublime Text 2 markup snippets from a kss styleguide directory. \nUsage:\n $0 -i sourcedir -o destdir -p prefix')
