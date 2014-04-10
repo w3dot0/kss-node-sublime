@@ -1,6 +1,6 @@
 {
   "name": "kss-sublime",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "KSS Sublime Snippet Generator",
   "bin": {
     "kss-sublime": "./bin/kss-sublime"
